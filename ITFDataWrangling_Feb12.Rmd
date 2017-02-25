@@ -1,0 +1,56 @@
+---
+title: "test1"
+output: pdf_document
+---
+
+```{r}
+library(reshape2)
+library(ggplot2)
+library(dplyr)
+library(xlsx)
+
+data <- read.xlsx2("summary_Feb12.xlsx", sheetIndex=1, stringsAsFactors=FALSE)
+data$Group <- as.factor(data$Group)
+data$Time <- as.factor(data$Time)
+```
+
+```{r}
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+```
+
+```{r}
+for (i in 3:10) {
+  data[,i] <- as.numeric(data[,i])
+  varname <- names(data)[i]
+  df2 <- data_summary(data, varname=varname, groupnames=c("Group", "Time"))
+  y <- df2[,3]
+  p1 <- ggplot(df2, aes(x=Time, y=y, group=Group, colour = Group)) +
+    geom_line() +
+    geom_point() +
+    geom_errorbar(aes(ymin=y-sd, ymax=y+sd), width=.2, 
+                  position=position_dodge(0.05)) +
+    ylab(varname)
+  print(p1)
+  print(df2)
+  df3 <- df2[-c(1,4),]
+y3 <- df3[,3]
+p2<- ggplot(df3, aes(x=Time, y=y3, fill=Group)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=y3-sd, ymax=y3+sd), width=.2,
+                 position=position_dodge(.9)) +
+  ylab(varname)
+print(p2)
+}
+```
+
